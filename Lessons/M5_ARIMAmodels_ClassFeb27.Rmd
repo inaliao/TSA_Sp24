@@ -27,7 +27,7 @@ library(tseries)
 library(outliers)
 library(tidyverse)
 library(cowplot)
-
+library(here)
 ```
 
 ## Importing data
@@ -37,7 +37,7 @@ For this module we will work with monthly average for electricity retail price i
 ```{r}
 
 #Importing time series data from text file#
-electricity_price <- read.csv(file="./Data/Average_retail_price_of_electricity_United_States_monthly.csv",header=TRUE,skip=4)
+electricity_price <- read.csv(here("Data/Average_retail_price_of_electricity_United_States_monthly.csv"),header=TRUE,skip=4)
 
 #Inspect data
 head(electricity_price)
@@ -63,7 +63,7 @@ electricity_price_processed <-
   rename( Commercial = commercial.cents.per.kilowatthour ) %>% 
   rename( Industrial = industrial.cents.per.kilowatthour ) 
 
-#Generating a plot
+#Generating a box plot by factor where factor is month of the year
 TS_Plot <- 
   ggplot(electricity_price_processed, aes(x=Month, y=Residential)) +
       geom_line()
@@ -204,7 +204,6 @@ plot_grid(
   autoplot(Pacf(deseasonal_residential_price_diff, lag = 40, plot=FALSE),  
                   main = "Diff/Deseason Residential Electricity Price"),
   nrow=1
-  
 )
 ```
 
@@ -226,6 +225,8 @@ Some important arguments for Arima() are:
 Model_111 <- Arima(deseasonal_residential_price,order=c(1,1,1))
 print(Model_111)
 compare_aic <- data.frame(Model_111$aic)
+#use AIC for model selection 
+
 
 #Check residuals series, if white noise we got a good fit
 plot_grid(
@@ -234,10 +235,23 @@ plot_grid(
   autoplot(Pacf(Model_111$residuals,lag.max=40, plot = FALSE)),
   nrow=1
 )
+#ideal: the residual should be white noise series 
+#the mean of the residual is around 0
+#no time dependent between the error term and time
+#the coefficient is within the blue interval
+#ar1:phi
+#ma1: theta
+
+
+#fitted: the estimate of the model 
+#residual: estimated - observation 
 
 #Now let's try ARIMA(0,1,1)
+#no AR components 
+#1 differencing order 
 Model_011 <- Arima(deseasonal_residential_price,order=c(0,1,1),include.drift=TRUE)
 print(Model_011)
+
 compare_aic <- data.frame(compare_aic,Model_011$aic)
 
 plot_grid(
@@ -248,8 +262,19 @@ plot_grid(
 )
 
 #Now let's try ARIMA(2,1,1)
+#2 autoregressive term
+#1 differencing order 
+#1 number of moving average terms
+
 Model_211 <- Arima(deseasonal_residential_price,order=c(2,1,1),include.drift=TRUE)
 print(Model_211)
+#coefficient interpretation
+#coefficient in respect to yt and yt-1 
+#coefficient in respect to yt-1 and yt-2 
+#se is the standard error
+#coefficient in respect moving average (ma1)
+#drift -> intercept component 
+
 compare_aic <- data.frame(compare_aic,Model_211$aic)
 
 plot_grid(
@@ -286,6 +311,8 @@ plot_grid(
 
 #Let's check AIC
 print(compare_aic)
+#select the model with the lowest AIC: model_011
+#no clear direction of the improvement 
 ```
 
 ## Automatically fitting ARIMA
@@ -293,9 +320,10 @@ print(compare_aic)
 Now that you have played with different order, let's try the auto.arima() function from the base package *stats*. The best fit for this time series is a ARIMA(2,1,2) with drift.
 
 ```{r}
-
-Model_autofit <- auto.arima(deseasonal_residential_price,max.D=0,max.P=0,max.Q=0)
-print(Model_autofit)
+Model_autofit<-auto.arima(deseasonal_residential_price,max.D=0,max.P=0,max.Q=0)
+#use max.D=0 and max.Q=0 to measure there is no seasonal components in the data 
+#capital PQD is for seasonal series
+#pqd is for non-seasonal series
 
 ```
 
@@ -306,9 +334,11 @@ If you don't differenciate the series, i.e., if you input the non-stationarity s
 ```{r}
 #Remember the order d=1 will perform the differencing
 
-Model_101 <- Arima(deseasonal_residential_price,order=c(1,0,1))
+#Model_101 <- Arima(deseasonal_residential_price,order=c(1,0,1))
 
 #You will get an error!
+#non-stationary AR part from CSS
+#use the differencing series to detrend
 
 Model_101_diff=Arima(deseasonal_residential_price_diff,order=c(1,0,1))
 print(Model_101_diff)
@@ -325,16 +355,14 @@ Note that AIC is worse for the ARIMA(1,0,1) with the non-difference series.
 One way of checking goodness of fit is by plotting observed versus fitted value over time. Here we will do it for some of the models we created only. But it can be generalized for all of them.
 
 ```{r}
-
 autoplot(deseasonal_residential_price,series="Observed")+
   autolayer(Model_111$fitted,series="ARIMA(1,1,1)")+
+  autolayer(Model_112$fitted,series="ARIMA(1,1,2)")+
   autolayer(Model_211$fitted,series="ARIMA(2,1,1)")+
-  autolayer(Model_212$fitted,series="ARIMA(2,1,2)")+
-  autolayer(Model_011$fitted,series="ARIMA(0,1,1)")
+  autolayer(Model_212$fitted,series="ARIMA(2,1,2)")
 
-
-
-
+#the change of the fitted does not change significantly with the AR or MA components 
+#if there is a spike in the after de-season -> use the seasonal ARIMA 
 ```
 This is still non-seasonal data. If you want to compare to original series, you need to add seasonal component back.
 

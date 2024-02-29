@@ -1,6 +1,6 @@
 ---
 title: "Import Data - ACF - PACF"
-author: "Luana Lima"
+author: "Ina Liao"
 output: pdf_document
 editor_options: 
   chunk_output_type: console
@@ -20,10 +20,16 @@ knitr::opts_chunk$set(echo = TRUE)
 It's useful to designate one code chunk to load packages on the beginning of the file. You can always add to this chunk as needed. But concentrate the packages needed on only one chunk.
 
 ```{r package, include=FALSE}
+#install.packages("lubridate")
+#install.packages("ggplot2")
+#install.packages("forecast")
+#install.packages("here")
+#install.packages("patchwork")
 library(lubridate)
 library(ggplot2)
 library(forecast) #added for Acf and Pacf functions
-
+library(here)
+library(patchwork)
 ```
 
 ## Importing data
@@ -35,7 +41,9 @@ For this first example we will import water inflow data for reservoirs in Brazil
 * *skip =* : if your file has rows explaining the data or any other rows on the top that need to be skipped you should just set skip to be equal to the number of row that should be skipped before reading the data. Mote that if header=TRUE, you should not skip the row with the header. The default is *skip=0*;
 * *dec =* : define *dec="."* or *dec=","* depending on how it's defined on your set. The default is ".".
 
-```{r}
+
+
+```{r Importing files}
 #Importing time series data from text file
 #I am calling it raw for now because it's data as it is in the file
 
@@ -51,11 +59,14 @@ getwd()
 # my output was "/Users/lmm89/Library/CloudStorage/OneDrive-Personal/Duke_University/11_Spring2023/ENV790_TSA/GitHub/TimeSeriesAnalysis_Sp23" meaning current directory is my project folder, therefore I only need to use "."
 # if output was "/Users/lmm89/Library/CloudStorage/OneDrive-Personal/Duke_University/11_Spring2023/ENV790_TSA/GitHub/TimeSeriesAnalysis_Sp23/Lessons" then I would need to use ".."
 
+
+#read.table not read.csv
 raw_inflow_data <- read.table(file="./Data/inflowtimeseries.txt",header=FALSE,skip=0)
 
 #If you want specific columns just trim the table
 raw_inflow_data <- raw_inflow_data[,1:5] #the space before the comma means you want all rows
                                  #and 1:5 means all columns from 1 to 5
+
 nhydro <- ncol(raw_inflow_data)-2
 nobs <- nrow(raw_inflow_data) 
 
@@ -72,26 +83,60 @@ str(raw_inflow_data)
 The data sets we will work with will be indexed by time, remember we are doing TIME series analysis. After importing your data set make sure that you have your dates right. For this specific inflow file our date is spread in two different columns. The first one is the month and the second the year. The best package to handle date conversion in R is lubridate. Let's see how we can use lubridate functions to combine those two columns into one date object. Note that this is only one example for our particular data set, for more info on lubridate function refer to tho this file [file](https://evoldyn.gitlab.io/evomics-2018/ref-sheets/R_lubridate.pdf) and "M1_Intro_DateObjects.Rmd" in our lessons folder.
 
 ```{r}
-#using package lubridate
+#using package lubridate to paste month and date
+#combine column 1 and column 2 and use - to separate year and month 
 my_date <- paste(raw_inflow_data[,1],raw_inflow_data[,2],sep="-")
+
+#transform the data type from character into date
 my_date <- my(my_date)  #function my from package lubridate
-head(my_date)
+head(my_date) #only contains date data
+
 #add that to inflow_data 
 inflow_data <- cbind(my_date,raw_inflow_data[,3:5]) #cbind stands for column bind
 head(inflow_data)
 
+#check if there is any missing data
+missing_data<-any(is.na(inflow_data))
+missing_data
 ```
 
 ## Initial plots
 
 A plot of observed values over time is the first thing you do to start understanding the data set. The default packages on R offer the function *plot()*. But we can generate improved plots using another package *ggplot2*. Package ggplot2 offers better looking plots, additional functionalities, easy incorporation of the date labels, legends, etc.  
 
-```{r}
+```{r Plot}
+plot<-ggplot(inflow_data,aes(x=my_date))+
+  geom_line(aes(y=HP1),color="gray")+
+  geom_line(aes(y=HP2),color="blue")+
+  geom_line(aes(y=HP3),color="orange")+
+  labs(x="Time",y="Water Inflow (cfs)")
+  
+plot
+```
+
+```{r TEST}
 #using package ggplot2
-ggplot()
+plot_HP1<-ggplot(inflow_data, aes(x=my_date,y=HP1))+
+  geom_line()+
+  geom_smooth(method=lm,color="blue")+
+  labs(x="Time",y="Water inflow (cfs)")
+plot_HP1
+
+plot_HP2<-ggplot(inflow_data, aes(x=my_date,y=HP2))+
+  geom_line()+
+  geom_smooth(method=lm,color="blue")+
+  labs(x="Time",y="Water inflow (cfs)")
+plot_HP2
+
+plot_HP3<-ggplot(inflow_data, aes(x=my_date,y=HP3))+
+  geom_line()+
+  geom_smooth(method=lm,color="blue")+
+  labs(x="Time",y="Water inflow (cfs)")
+plot_HP3
 
 #adding two time series to the same plot
-
+combine_plot<- plot_HP1 / plot_HP2 / plot_HP3
+combine_plot
 ```
 
 In this course we will also use *autoplot()* which is a ggplot() for time series object. But then we will need to convert our inflow data frame to a *ts* object first.
@@ -102,22 +147,56 @@ In this course we will also use *autoplot()* which is a ggplot() for time series
 Many of the functions we will use require a time series object. You can transform your data in a time series using the function *ts()*. Only the columns with reservoir inflow data should be transformed, not the ones with month and year. Your ts object is not a data frame, but like I said we will need it as a ts for some function we will explore in future scripts.
 
 ```{r}
-ts_inflow_data <- #####
-ts_inflow_data
+# ts(): to create time-series objects 
+# start= c(year, month)
+# frequency = observations (when does your data start to repeat)
+# yearly data: frequency=1
+# monthly data: frequency=12
+# daily data: frequency=365
 
+#create a singel vector 
+ts_HP1 <- ts(inflow_data[,"HP1"],start=c(1931,1),frequency=12)
+ts_HP1
+#inflow_data[,"HP1"]: to select all rows in column HP1
+ts_HP2 <- ts(inflow_data$HP2,start=c(1931,1),frequency=12)
+ts_HP3 <- ts(inflow_data$HP3,start=c(1931,1),frequency=12)
+#ts_HP34 <- ts(inflow_data$HP3,start=c(1931,1),frequency=1)
+
+#create a metric
+ts_inflow_data<-ts(inflow_data,start=c(1931,1),frequency=12)
+ts_inflow_data
 ```
 
 Note that ts_inflow_data has information on start, end and frequency. We will discuss frequency in future lectures, for now let's just keep the default value for frequency which is 1.
 
 Let's see the plots generated with *autoplot()*.
 
-```{r}
-
-autoplot(ts_inflow_data) +
+```{r Autoplot}
+autoplot_all<-autoplot(ts_inflow_data) +
   xlab("Time") +
-  ylab("Inflow") +
+  ylab("Water inflow") +
+  labs(color="Reservoir")
+autoplot_all
+```
+
+```{r}
+autoplot_HP1<-autoplot(ts_HP1) +
+  xlab("Time") +
+  ylab("Water inflow") +
+  labs(color="Reservoir")
+
+autoplot_HP2<-autoplot(ts_HP2) +
+  xlab("Time") +
+  ylab("Water inflow") +
   labs(color="Reservoir")
   
+autoplot_HP3<-autoplot(ts_HP3) +
+  xlab("Time") +
+  ylab("Water inflow") +
+  labs(color="Reservoir")
+
+combine_autoplot<-autoplot_HP1/autoplot_HP2/autoplot_HP3
+combine_autoplot
 ```
 
 
@@ -126,17 +205,42 @@ autoplot(ts_inflow_data) +
 There are multiple ways to get acf and pacf plots in R. The default package "stats" have the functions acf() and pacf(). Another option is with the functions Acf() and Pacf() from package "forecast". Package forecast is not a default package. So you need to install and load it on the beginning of your scripts. 
 
 ```{r acf}
-# Option 1: The function acf() and pacf() is from package "stats"
-HP1_acf=
 
-HP1_pacf=
+#ACF and PACF 
+# 1. measure the temporal dependency of the stochastic process 
+# 2. give us the information about the autoregressive component of the series 
+
+#ACF plot: show the correlation between a time series and lagged versions of itself. ACF can help us understand the seasonal pattern and trend in the dataset. We can build a model that includes lags that show strong correlation between the time series (PACF can help us specify which lag should be added to the model [with the highest y-axis absolute values, closer to -1 or +1])
+#anything outside of the blue intervals can be considered as "significant" 
+
+# Option 1: The function acf() and pacf() is from package "stats"
+#lag starts at 0
+HP1_acf<-stats::acf(ts_HP1)
+HP1_acf
+#lag in this case will be month cause the frequency is set as 12
+#y-axis represents the strength of the correlation 
+
+HP1_pacf<-stats::pacf(ts_HP1)
+HP1_pacf
+#to remove the effect of the intermediate vairbales 
 
 #Option 2: Computing ACF and PACF with package "forecast"
+#lag starts at 1
 
 #The next line will output a plot since we have plot=TRUE and also store the acf values in the object
-HP1_acf=
+#if you include lag 2, then we have to include lag 1 and lag 3
+HP1_acf_2<-forecast::Acf(ts_HP1,lag.max = 40)
+HP1_acf_2
 
-HP1_pacf=
-  
+HP1_pacf_2<-forecast::Pacf(ts_HP1)
+HP1_pacf_2
+```
+
+```{r Test 2}
+temp<-c(14,2,16.4,11.9,15.2,18.5,22.1,19.4,25.1,23.4,18.1,22.6,17.2)
+ts_temp<-ts(temp)
+acf_temp<-Acf(temp)
+acf_temp
+
 ```
 

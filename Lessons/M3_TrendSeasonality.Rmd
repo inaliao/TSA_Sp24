@@ -4,6 +4,9 @@ author: "Luana Lima"
 output: pdf_document
 ---
 
+#check the code 
+
+
 ## Setting R code chunk options
 
 First R code chunk is used for setting the options for all R code chunks. The choice echo=TRUE means both code and output will appear on report, include = FALSE neither code nor output is printed.
@@ -22,7 +25,7 @@ library(ggplot2)
 library(forecast)
 library(Kendall)
 library(tseries)
-
+library(here)
 ```
 
 ## Importing data
@@ -32,10 +35,14 @@ Let's continue working with our inflow data for reservoirs in Brazil.
 ```{r}
 
 #Importing time series data from text file#
-raw_inflow_data <- read.table(file="../Data/inflowtimeseries.txt",header=FALSE,skip=0)
+here()
+#raw_inflow_data <- read.table(file="../Data/inflowtimeseries.txt",header=FALSE,skip=0)
+raw_inflow_data<-read.table(here("Data/inflowtimeseries.txt"),stringsAsFactors = TRUE, header=TRUE,skip=0)
+
 
 #Trim the table to include only columns you need
 nhydro <- ncol(raw_inflow_data)-2
+nhydro
 nobs <- nrow(raw_inflow_data) 
 
 #If your file does not have header like this one you can add column names after 
@@ -70,6 +77,10 @@ Initial time series plot.
 
 ```{r}
 #using package ggplot2
+
+#i change from 1 to nhydro
+#[1+i]: select the second column (the first column is date)
+#ggplot will not work in the for loop without "print"
 for(i in 1:nhydro){
   print(ggplot(inflow_data, aes(x=my_date, y=inflow_data[,(1+i)])) +
             geom_line(color="blue") +
@@ -84,10 +95,11 @@ for(i in 1:nhydro){
 The initial plots showed that we have zeros in the end of the data set. It could be missing observation or observation that haven't been observed yet. Use the tail() to find out how many zeros you have and how many lines you will need to remove.
 
 ```{r}
-#check the final obs on data 
+#check the final obs on data (for the head and tail, more to come for the missing module)
 tail(inflow_data)
 
-
+#approach to looking for zero within the dataframe 
+#using date series dataframe and merge with the exisiting dataframe to find the rows with missing data
 ```
 
 Note our last observation is from August 2011 but the data file was filled with zeros. Let's remove the last four rows of our data set.
@@ -109,9 +121,15 @@ Fixed!
 Many of the functions we will use require a time series object. You can transform your data in a time series using the function *ts()*. 
 
 ```{r}
-ts_inflow_data <- ts(inflow_data[,2:(2+nhydro-1)],frequency=12) 
+ts_inflow_data <- ts(inflow_data[,2:(2+nhydro-1)],start=c(1931,1),frequency=12) 
+
+#select all column from 2 to 2+15-1 (you can also do nhydro+1)
+#to avoid go over from the first to the last columns again
+
 #note that we are only transforming columns with inflow data, not the date columns  #start=my_date[1],end=my_date[nobs],
 head(ts_inflow_data,15)
+
+#head() default will show the first 6 rows 
 ```
 
 
@@ -120,7 +138,7 @@ head(ts_inflow_data,15)
 Let's use functions Acf() and Pacf() from package "forecast".
 
 ```{r acf}
-#Acf and Pacf for HP1
+#Acf and Pacf for HPi
 for(i in 1:nhydro){
   par(mfrow=c(1,2))  #place plot side by side
   Acf(ts_inflow_data[,i],lag.max=40,main=paste("Inflows HP",i,sep="")) 
@@ -128,29 +146,71 @@ for(i in 1:nhydro){
   Pacf(ts_inflow_data[,i],lag.max=40,main=paste("Inflows HP",i,sep=""))
 }
 
+#use ACF to see if there is a trend and seasonal component
+#we can also use the time series plot to see the trend
+#use pacf to identify which lags should be included 
 ```
+```{r Acf and Pacf, message=FALSE}
+iHP<-4
+plot_grid(
+  autoplot(ts_inflow_data[,iHP]),
+  autoplot(Acf(ts_inflow_data[,iHP],lags=40,plot=FALSE),main=NULL),
+  #if plot=TRUE, another ACF plot will be printed (since autoplot is default to print out the ACF plot)
+  nrow=2,ncol=2
+)
 
+#after detrend (removing the linear regression), autocorrelation decrease in the detrended series 
+#purpose: detrend to let time representative for the needed time (include the needed variables in the model)
+#using ACF to understand which time frame (lags #) should be included in the model (which lag is less dependent on the time) 
+#capture the model util lag 20 
+
+#use ACF or PACF plot?
+#use ACF to see the trend and the seasonal components 
+#what is the purpose of pacf plot??
+```
 
 ## Trend Component - Linear Model
 
 Let's identify and remove trend component. You start by fitting a linear model to $Y_t=\beta_0+\beta_1*t+\epsilon_t$. 
 
 ```{r}
-#Create vector t
+#Create vector t to store the number of rows 
+#we could also use my_date but it's more complicated 
+t<-1:nobs 
 
+iHP <-4
+#to select the HP4
+#the first column is the date column 
+#iHP+1: the fifth column
 
+#Fit a linear trend to TS of iHP 
+#use lm to find the beta0 and beta1
+linear_trend<-lm(inflow_data[,iHP+1]~t)
+summary(linear_trend)
 
-#Fit a linear trend to TS of iHP
-
-
+#there is a strong relationship between inflow in HP4 and time
 ```
 
 
 ```{r}
 #remove the trend from series
+#use the $ to find the objects stored in the object 
+beta0<-linear_trend$coefficients[1]
+beta1<-linear_trend$coefficients[2]
 
+y_detrend<-inflow_data[,iHP+1] - (beta0 + beta1*t)
+#subtract the series that we believe has trend components
+y_detrend
 
+#create another data frame
+df_detrend<-data.frame("date"=inflow_data$my_date,
+                       "observed"=inflow_data[,iHP+1],
+                       "detrend"=y_detrend)
 
+#autoplot and autolayer will only work with the time series object 
+#still has the variability (might have other variables that is affecting the time series data)
+#how to confirm if the detrend the series is correct 
+#if the trend is non-linear moving -> using moving average 
 ```
 
 Note that blue line is our original series, red line is our trend, green line is our original series minus the trend or in other words the detrended series. And in orange is the trend line for the detrended series which has slope 0 meaning we were able to effectively eliminate the trend with a linear model.
@@ -161,7 +221,31 @@ Note that blue line is our original series, red line is our trend, green line is
 Now let's shift attention to the seasonal component.
 
 ```{r}
-#Use seasonal means model
+#Use seasonal means model by assigning dummy variable
+iHP<-1
+
+#create dummies
+seasonal_dummies<-seasonaldummy(ts_inflow_data[,iHP])
+
+#seasonal dummy only work when the seasonal frequency is specified (frequency=12)
+seasonal_linear<-lm(inflow_data[,(iHP+1)]~seasonal_dummies) #use the original data instead of the time series (ideally we have to use the detrended series)
+summary(seasonal_linear)
+
+seasonal_linear$coefficients
+# 12 coefficients for each month 
+
+#store coeff
+slope<-seasonal_linear$coefficients[2:12]
+intercept<-seasonal_linear$coefficients[1]
+
+#create seasonal components 
+# %*%: calculate element by element (slope multiply Jan/Feb...)
+seasonal_components<-array(0,nobs)
+
+for i in (1:nobs){
+  seasonal_components[i]<-intercept+slope %*% seasonal_dummies[i,]
+  #the month is stored in rows in seasonal dummies 
+}
 
 
 ```

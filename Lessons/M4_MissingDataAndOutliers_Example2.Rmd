@@ -25,9 +25,9 @@ library(Kendall)
 library(tseries)
 
 #New packages for M4
-#install.packages("outliers")
+install.packages("outliers")
 library(outliers)
-#install.packages("tidyverse")
+install.packages("tidyverse")
 library(tidyverse)
 
 ```
@@ -67,17 +67,19 @@ tsclean() from package 'forecast' identify and replace outliers and missing valu
 
 clean_wind_data <- tsclean(ts_wind_data)  #object should be a time series
 
+#use ts-clean to replace the missing data 
+#ts-clean can be used for missing data and outliers 
+
 autoplot(clean_wind_data, series="Wind Clean") +
   autolayer(ts_wind_data, series="Wind Raw") +
   ylab("Average Wind Speed") 
 
 #Note we only replaced missing data, algorithm did not identify any outliers for this data set.
-  
-
 ```
 
 If you want to handle missing data, but do not want to remove outliers, here are two other opion that will replace them using linear interpolation.
 
+these two functions will only work for na 
 `forecast::na.interp()`
 `zoo::na.approx()`
 

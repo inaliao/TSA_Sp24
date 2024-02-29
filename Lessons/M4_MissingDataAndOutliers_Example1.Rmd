@@ -53,7 +53,7 @@ my_date <- my(my_date)  #function my from package lubridate
 
 #add that to inflow_data and store in a new data frame 
 inflow_data <- cbind(my_date,raw_inflow_data[,3:(3+nhydro-1)])
-head(inflow_data,24)
+head(inflow_data)
 
 #Remove last for rows by replacing current data frame
 inflow_data <- inflow_data[1:(nobs-4),]
@@ -72,10 +72,10 @@ ts_inflow_data <- ts(inflow_data[,2:(2+nhydro-1)],frequency=12)
 Scatter plots, box plots and histograms are the most preferred visualization tools to detect outliers.  Histograms will help you understand the shape and spread of the data and to identify any potential outliers. And boxplots will give more information on the spread of the data. 
 
 ```{r}
+
 #using package ggplot2 to make histograms
 for(i in 1:nhydro){
   print(ggplot(inflow_data, aes(inflow_data[,(1+i)])) +
-            geom_histogram() +
             xlab(paste0("Inflow ",colnames(inflow_data)[(1+i)],sep="")) 
         )
 }
@@ -100,12 +100,18 @@ The stats package has a function called decompose(). This function only take tim
 The random component is the time series without seasonal and trend component. Let's try to identify outliers by looking at the random component only.
 
 ```{r}
+#difference between stl and decompose function 
+#what will only work for multiplicative trend
+#stl: seasonal trend 
+#decompose: only take time series object 
+
 #Using R decompose function
 iHP=1
-decompose_inflow_data <- decompose(ts_inflow_data[,iHP],"additive")
+decompose_inflow_data=decompose(ts_inflow_data[,iHP],"additive")
 plot(decompose_inflow_data)
 
 #Inspect random component
+#the random component is from the decompose function 
 inflow_random <- decompose_inflow_data$random   
 mean_inflow <- mean(inflow_random)  
 sd_inflow <- sd(inflow_random)
@@ -114,14 +120,21 @@ cat(mean_inflow,sd_inflow)
 #Note random series has some missing values, that is why we got NAs
 
 #Compute mean and standard deviation without missing values
-mean_inflow <- mean(na.exclude(inflow_random))  #exclude NA or missing observation to compute mean and std
+mean_inflow <- mean(na.exclude(inflow_random))  
+#exclude NA or missing observation to compute mean and std
+#using na.rm=TRUE or na.exclude()
+#the missing value is caused by differencing the trend
+
+
 sd_inflow <- sd(na.exclude(inflow_random))
 
 cat(mean_inflow,sd_inflow)
 
 autoplot(inflow_random)+
   autolayer(tsclean(inflow_random))
+#tsclean(): remove missing data and outleirs from the series, from the forecast package 
 
+#if the outliers are not errors, then those outliers should be included in the anlaysis to represent the viability in the model
 ```
 
 ## Missing observations
@@ -131,8 +144,10 @@ The decompose function introduced NAs in the beginning and end of the data set. 
 ```{r}
 #Create data frame for further use with new random series
 df_inflow_random <- data.frame(date=my_date,month=as.factor(month(my_date)),inflow=as.numeric(inflow_random))
+#remember to convert the type into numaric
 
-#How many NAs we have, you can get it from summary or using is.na()
+#calculate how many NAs are there in the dataframe 
+#using is.na() function
 sum(is.na(df_inflow_random$inflow))
 
 #We have NAs in the beginning and end of data, just remove them
@@ -140,6 +155,7 @@ head(df_inflow_random,10)
 tail(df_inflow_random,10)
 
 #Just remove them since they are on tails
+#na.omit: omit all NA in the dataframe
 df_inflow_random <- na.omit(df_inflow_random)
 
 #Check data again
@@ -193,10 +209,11 @@ If the test performed confirms an outlier and you want to remove use function `r
                       
 
 ```{r}
-#Just find extreme value
+#Just find the most extreme value
+#use outlier() function
 outlier(df_inflow_random$inflow) 
                   
-#Function chisq.out.test check if extreme value is outlier
+#Function chisq.out.test check if extreme value is outlier 
 grubbs_test <- grubbs.test(df_inflow_random$inflow)
 print(grubbs_test) #look at the p-value to find the decision 
 
@@ -209,7 +226,6 @@ ggplot(df_inflow_random, aes(x=date, y=inflow)) +
             geom_line() +
             geom_abline(slope=0,intercept=3*sd_inflow,color="red") +
             geom_abline(slope=0,intercept=-3*sd_inflow,color="red")
-
 ```
 
 Note we still seem to have some outliers. You can repeat the process until the next extreme value is not an outlier or write a loop as below.
@@ -272,6 +288,8 @@ ggplot(df_inflow_random, aes(y=inflow)) +
 summary(df_inflow_random$inflow)
 #Note from the summary that the after removing outliers we did not change the statistics of the original data (max, mix, mean, median, etc)
 
+#keep removing the outliers until all the data points are within the red bandwidth
+#or adjust based on the p-value (significant level)
 ```
 
 

@@ -21,12 +21,18 @@ knitr::opts_chunk$set(echo = TRUE,tidy.opts=list(width.cutoff=60), tidy=TRUE)
 Second R code chunk is for loading packages. By setting `message = FALSE`, the code will appear but not the output. 
 
 ```{r package, message=FALSE}
+#install.packages("lubridate")
+#install.packages("ggplot2")
+#install.packages("forecast")
+#install.packages("Kendall")
+#install.packages("tseries")
+install.packages("here")
 library(lubridate)
 library(ggplot2)
 library(forecast)
 library(Kendall)
 library(tseries)
-
+library(here)
 ```
 
 
@@ -47,6 +53,12 @@ head(energy_data1)
 ```
 
 ## Importing data with read.csv()
+
+```{r}
+here()
+energy_data4<-read.csv(here("Data/Table_10.1_Renewable_Energy_Production_and_Consumption_by_Source.csv"),stringsAsFactors = TRUE)
+
+```
 
 ```{r}
 #no need to library additional packages

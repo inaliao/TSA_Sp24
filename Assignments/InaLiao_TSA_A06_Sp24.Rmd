@@ -4,19 +4,33 @@ subtitle: "Assignment 6 - Due date 02/28/24"
 author: "Ina Liao"
 output: pdf_document
 geometry: margin=2.54cm
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
 
 ## Directions
 
-You should open the .rmd file corresponding to this assignment on RStudio. The file is available on our class repository on Github.
+You should open the .rmd file corresponding to this assignment on
+RStudio. The file is available on our class repository on Github.
 
-Once you have the file open on your local machine the first thing you will do is rename the file such that it includes your first and last name (e.g., "LuanaLima_TSA_A06_Sp24.Rmd"). Then change "Student Name" on line 4 with your name.
+Once you have the file open on your local machine the first thing you
+will do is rename the file such that it includes your first and last
+name (e.g., "LuanaLima_TSA_A06_Sp24.Rmd"). Then change "Student Name" on
+line 4 with your name.
 
-Then you will start working through the assignment by **creating code and output** that answer each question. Be sure to use this assignment document. Your report should contain the answer to each question and any plots/tables you obtained (when applicable).
+Then you will start working through the assignment by **creating code
+and output** that answer each question. Be sure to use this assignment
+document. Your report should contain the answer to each question and any
+plots/tables you obtained (when applicable).
 
-When you have completed the assignment, **Knit** the text and code into a single PDF file. Submit this pdf using Sakai.
+When you have completed the assignment, **Knit** the text and code into
+a single PDF file. Submit this pdf using Sakai.
 
-R packages needed for this assignment: "ggplot2", "forecast", "tseries" and "sarima". Install these packages, if you haven't done yet. Do not forget to load them before running your script, since they are NOT default packages.
+R packages needed for this assignment: "ggplot2", "forecast", "tseries"
+and "sarima". Install these packages, if you haven't done yet. Do not
+forget to load them before running your script, since they are NOT
+default packages.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,tidy.opts=list(width.cutoff=80), tidy=FALSE) 
@@ -42,22 +56,37 @@ This assignment has general questions about ARIMA Models.
 
 ## Q1
 
-Describe the important characteristics of the sample autocorrelation function (ACF) plot and the partial sample autocorrelation function (PACF) plot for the following models:
+Describe the important characteristics of the sample autocorrelation
+function (ACF) plot and the partial sample autocorrelation function
+(PACF) plot for the following models:
 
 -   AR(2)
 
-> Answer: The ACF plot shows an exponential decay in autocorrelation. PACF plot has the clear cutoff at lag 1, which can help us identify the order of the MA model.
-
+> Answer: The ACF plot shows an exponential decay in autocorrelation.
+> PACF plot has the clear cutoff at lag 1, which can help us identify
+> the order of the MA model.
 
 -   MA(1)
 
-> Answer: The ACf plot can help us identify the order of the MA model, which will have the clear cutoff at lag 1. The PACF plot displays an exponential decay in partial autocorrelation.
+> Answer: The ACf plot can help us identify the order of the MA model,
+> which will have the clear cutoff at lag 1. The PACF plot displays an
+> exponential decay in partial autocorrelation.
 
 ## Q2
 
-Recall that the non-seasonal ARIMA is described by three parameters ARIMA$(p,d,q)$ where $p$ is the order of the autoregressive component, $d$ is the number of times the series need to be differenced to obtain stationarity and $q$ is the order of the moving average component. If we don't need to difference the series, we don't need to specify the "I" part and we can use the short version, i.e., the ARMA$(p,q)$.
+Recall that the non-seasonal ARIMA is described by three parameters
+ARIMA$(p,d,q)$ where $p$ is the order of the autoregressive component,
+$d$ is the number of times the series need to be differenced to obtain
+stationarity and $q$ is the order of the moving average component. If we
+don't need to difference the series, we don't need to specify the "I"
+part and we can use the short version, i.e., the ARMA$(p,q)$.
 
-(a) Consider three models: ARMA(1,0), ARMA(0,1) and ARMA(1,1) with parameters $\phi=0.6$ and $\theta= 0.9$. The $\phi$ refers to the AR coefficient and the $\theta$ refers to the MA coefficient. Use the `arima.sim()` function in R to generate $n=100$ observations from each of these three models. Then, using `autoplot()` plot the generated series in three separate graphs.
+(a) Consider three models: ARMA(1,0), ARMA(0,1) and ARMA(1,1) with
+    parameters $\phi=0.6$ and $\theta= 0.9$. The $\phi$ refers to the AR
+    coefficient and the $\theta$ refers to the MA coefficient. Use the
+    `arima.sim()` function in R to generate $n=100$ observations from
+    each of these three models. Then, using `autoplot()` plot the
+    generated series in three separate graphs.
 
 ```{r ARMA Series 1}
 #set the parameters
@@ -81,7 +110,8 @@ plot_11<-autoplot(arma_11)
 plot_11
 ```
 
-(b) Plot the sample ACF for each of these models in one window to facilitate comparison (Hint: use `cowplot::plot_grid()`).
+(b) Plot the sample ACF for each of these models in one window to
+    facilitate comparison (Hint: use `cowplot::plot_grid()`).
 
 ```{r ARMA_ACF}
 plot_combine_acf<-cowplot::plot_grid(
@@ -93,7 +123,8 @@ plot_combine_acf<-cowplot::plot_grid(
 plot_combine_acf
 ```
 
-(c) Plot the sample PACF for each of these models in one window to facilitate comparison.
+(c) Plot the sample PACF for each of these models in one window to
+    facilitate comparison.
 
 ```{r ARMA_PACF}
 plot_combine_pacf<-cowplot::plot_grid(
@@ -105,17 +136,33 @@ plot_combine_pacf<-cowplot::plot_grid(
 plot_combine_pacf
 ```
 
-(d) Look at the ACFs and PACFs. Imagine you had these plots for a data set and you were asked to identify the model, i.e., is it AR, MA or ARMA and the order of each component. Would you be able identify them correctly? Explain your answer.
+(d) Look at the ACFs and PACFs. Imagine you had these plots for a data
+    set and you were asked to identify the model, i.e., is it AR, MA or
+    ARMA and the order of each component. Would you be able identify
+    them correctly? Explain your answer.
 
+> Answer: We can see an exponential decay in the ACF plot, and a sharp
+> cutoff at lag-1 in the PACF plot, which suggests the AR model. The ACF
+> plot shows a sharp cutoff at lag-1 and the PACF plot show an
+> exponential decay, which suggests the MA model. We can observe an
+> exponential decay in ACF and PACF plots, which suggests the ARMA
+> model. Relying solely on PACF and ACF plots to determine the model may
+> be insufficient, as the patterns in these plots can often overlap and
+> be difficult to interpret without additional information. \# the
+> pattern in the ACF plot and PACf plot seem to be overlapped in the
+> ARMA(1,1)
 
-> Answer: We can see an exponential decay in the ACF plot, and a sharp cutoff at lag-1 in the PACF plot, which suggests the AR model. The ACF plot shows a sharp cutoff at lag-1 and the PACF plot show an exponential decay, which suggests the MA model. We can observe an exponential decay in ACF and PACF plots, which suggests the ARMA model. Relying solely on PACF and ACF plots to determine the model may be insufficient, as the patterns in these plots can often overlap and be difficult to interpret without additional information.
-# the pattern in the ACF plot and PACf plot seem to be overlapped in the ARMA(1,1)
+(e) Compare the PACF values R computed with the values you provided for
+    the lag 1 correlation coefficient, i.e., does $\phi=0.6$ match what
+    you see on PACF for ARMA(1,0), and ARMA(1,1)? Should they match?
 
-(e) Compare the PACF values R computed with the values you provided for the lag 1 correlation coefficient, i.e., does $\phi=0.6$ match what you see on PACF for ARMA(1,0), and ARMA(1,1)? Should they match?
+> Answer: In ARMA(1,0) and ARMA(1,1), the PACF values at lag-1 match the
+> AR coefficient (phi=0.6). If there is no randomness in the stimulated
+> data, the partial autocoefficient should match the specified
+> coefficient.
 
-> Answer: In ARMA(1,0) and ARMA(1,1), the PACF values at lag-1 match the AR coefficient (phi=0.6). If there is no randomness in the stimulated data, the partial autocoefficient should match the specified coefficient.
-
-(f) Increase number of observations to $n=1000$ and repeat parts (b)-(e).
+(f) Increase number of observations to $n=1000$ and repeat parts
+    (b)-(e).
 
 ```{r ARMA Series 2}
 #set the parameters
@@ -155,45 +202,80 @@ plot_combine_pacf<-cowplot::plot_grid(
 plot_combine_pacf
 ```
 
-> Answer: We can see an exponential decay in the ACF plot, and a sharp cutoff at lag-1 in the PACF plot, which suggests the AR model. The ACF plot shows a sharp cutoff at lag-1 and the PACF plot show an exponential decay, which suggests the MA model. We can observe an exponential decay in ACF and PACF plots, which suggests the ARMA model. Relying solely on PACF and ACF plots to determine the model may be insufficient, as the patterns in these plots can often overlap and be difficult to interpret without additional analysis.
-#beacuse ARMA(0,1) and ARMA(1,1) include the moving average components, the autocoefficient in the PACF plot do not match the AR coefficient (phi=0.6)
-#we can also ask R to print out the PACF value instead of just looking at the value in the plot 
+> Answer: We can see an exponential decay in the ACF plot, and a sharp
+> cutoff at lag-1 in the PACF plot, which suggests the AR model. The ACF
+> plot shows a sharp cutoff at lag-1 and the PACF plot show an
+> exponential decay, which suggests the MA model. We can observe an
+> exponential decay in ACF and PACF plots, which suggests the ARMA
+> model. Relying solely on PACF and ACF plots to determine the model may
+> be insufficient, as the patterns in these plots can often overlap and
+> be difficult to interpret without additional analysis. #beacuse
+> ARMA(0,1) and ARMA(1,1) include the moving average components, the
+> autocoefficient in the PACF plot do not match the AR coefficient
+> (phi=0.6) #we can also ask R to print out the PACF value instead of
+> just looking at the value in the plot
 
-> Answer: In ARMA(1,0) and ARMA(1,1), the PACF values at lag-1 do not match the AR coefficient (phi=0.6), which might due to the randomness in the stimulated data.
+> Answer: In ARMA(1,0) and ARMA(1,1), the PACF values at lag-1 do not
+> match the AR coefficient (phi=0.6), which might due to the randomness
+> in the stimulated data.
 
 ## Q3
 
 Consider the ARIMA model $y_t=0.7*y_{t-1}-0.25*y_{t-12}+a_t-0.1*a_{t-1}$
 
-(a) Identify the model using the notation ARIMA$(p,d,q)(P,D,Q)_ s$, i.e., identify the integers $p,d,q,P,D,Q,s$ (if possible) from the equation.
+(a) Identify the model using the notation ARIMA$(p,d,q)(P,D,Q)_ s$,
+    i.e., identify the integers $p,d,q,P,D,Q,s$ (if possible) from the
+    equation.
 
-1. p is the number of autoregressive term. p=1 because of $y_{t-1}$.
-2. d is the number of differences. d=0 because there is no differencing term applied to $y_{t}$.
-3. q is the number of moving average term. q=1 because of $0.1*a_{t-1}$.
-4. P is the seasonal order of autoregressive term. P=1 because of $y_{t-1}$.
-5. D is the seasonal order of differences. Q=0 because there is no MA terms.
-6. s is the length of the seasonal cycle. s=12 because $y_{t-12}$
+<!-- -->
+
+1.  p is the number of autoregressive term. p=1 because of $y_{t-1}$.
+2.  d is the number of differences. d=0 because there is no differencing
+    term applied to $y_{t}$.
+3.  q is the number of moving average term. q=1 because of
+    $0.1*a_{t-1}$.
+4.  P is the seasonal order of autoregressive term. P=1 because of
+    $y_{t-1}$.
+5.  D is the seasonal order of differences.
+6.  Q=0 because there is no MA terms.
+7.  s is the length of the seasonal cycle. s=12 because $y_{t-12}$
 
 ARIMA(1,d,1)x(1,D,0)12
 
+$y_{t}$. depends on two previous observation $y_{t-1}$, and $y_{t-12}$,
+since 12 is the seasonal lag the order of the AR,the coefficient of the
+AR component will be p=1 and the SAM component will be P=1. The value of
+$y_{t}$ also depends on the previous residuals $a_{t-1}$ meaning we have
+a MA components of order q=1. There is no $a_{t-1}$ so SAM components
+order will be Q=1.
 
-$y_{t}$. depends on two previous observation $y_{t-1}$, and $y_{t-12}$, since 12 is the seasonal lag the order of the AR,the coefficient of the AR component will be p=1 and the SAM component will be P=1. The value of $y_{t}$ also depends on the previous residuals $a_{t-1}$ meaning we have a MA components of order q=1. There is no $a_{t-1}$ so SAM components order will be Q=1. 
-
-With respect to differencing, it is hard to tell from the equation since there is no constant term, therefore we are either working with a zero mean process or the series has been differenced. Given the constraint of the SARIMA model that d+D<= 2, the d and D values might be the following combinations: 
-1. d=1, and D=0
-2. d=0, and D=1
-3. d=0, and D=0
+With respect to differencing, it is hard to tell from the equation since
+there is no constant term, therefore we are either working with a zero
+mean process or the series has been differenced. Given the constraint of
+the SARIMA model that d+D\<= 2, the d and D values might be the
+following combinations: 1. d=1, and D=0 2. d=0, and D=1 3. d=0, and D=0
 4. d=1, and D=1
 
-(b) Also from the equation what are the values of the parameters, i.e., model coefficients.
+(b) Also from the equation what are the values of the parameters, i.e.,
+    model coefficients.
+
+<!-- -->
 
 1.  The autoregressive coefficient $\phi=0.7$.
 2.  The moving average coefficient $\theta=-0.1$.
-3.  The seasonal autoregressive coefficient $\Phi=-0.25$. The seasonal moving average coefficient $\Theta=0$.
+3.  The seasonal autoregressive coefficient $\Phi=-0.25$. The seasonal
+    moving average coefficient $\Theta=0$.
 
 ## Q4
 
-Simulate a seasonal ARIMA$(0, 1)\times(1, 0)_{12}$ model with $\phi =0 .8$ and $\theta = 0.5$ using the `sim_sarima()` function from package `sarima`. The $12$ after the bracket tells you that $s=12$, i.e., the seasonal lag is 12, suggesting monthly data whose behavior is repeated every 12 months. You can generate as many observations as you like. Note the Integrated part was omitted. It means the series do not need differencing, therefore $d=D=0$. Plot the generated series using `autoplot()`. Does it look seasonal?
+Simulate a seasonal ARIMA$(0, 1)\times(1, 0)_{12}$ model with
+$\phi =0 .8$ and $\theta = 0.5$ using the `sim_sarima()` function from
+package `sarima`. The $12$ after the bracket tells you that $s=12$,
+i.e., the seasonal lag is 12, suggesting monthly data whose behavior is
+repeated every 12 months. You can generate as many observations as you
+like. Note the Integrated part was omitted. It means the series do not
+need differencing, therefore $d=D=0$. Plot the generated series using
+`autoplot()`. Does it look seasonal?
 
 ```{r ARIMA}
 #set the parameters
@@ -216,11 +298,15 @@ plot_sarima
 
 ```
 
-The plot show a wave-like pattern, which suggests possible presence of a seasonal component in the series.
+The plot show a wave-like pattern, which suggests possible presence of a
+seasonal component in the series.
 
 ## Q5
 
-Plot ACF and PACF of the simulated series in Q4. Comment if the plots are well representing the model you simulated, i.e., would you be able to identify the order of both non-seasonal and seasonal components from the plots? Explain.
+Plot ACF and PACF of the simulated series in Q4. Comment if the plots
+are well representing the model you simulated, i.e., would you be able
+to identify the order of both non-seasonal and seasonal components from
+the plots? Explain.
 
 ```{r}
 plot_sarima_acf_pacf<-cowplot::plot_grid(
@@ -231,4 +317,7 @@ plot_sarima_acf_pacf<-cowplot::plot_grid(
 plot_sarima_acf_pacf
 ```
 
-There are spikes at lags 12, 24, and 36 on the ACF plot, and a spike at lag 12 on the PACF plot. These spikes suggest seasonal components might exist in the time series data. Further statistical testing is required to confirm the existence of a seasonal component.
+There are spikes at lags 12, 24, and 36 on the ACF plot, and a spike at
+lag 12 on the PACF plot. These spikes suggest seasonal components might
+exist in the time series data. Further statistical testing is required
+to confirm the existence of a seasonal component.

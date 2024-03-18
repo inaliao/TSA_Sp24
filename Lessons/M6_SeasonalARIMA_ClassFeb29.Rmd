@@ -26,7 +26,8 @@ library(Kendall)
 library(tseries)
 library(outliers)
 library(tidyverse)
-
+library(here)
+library(cowplot)
 ```
 
 ## Importing data
@@ -36,7 +37,7 @@ For this module we will work with monthly average for electricity retail price i
 ```{r}
 
 #Importing time series data from text file#
-electricity_price <- read.csv(file="./Data/Average_retail_price_of_electricity_United_States_monthly.csv",header=TRUE,skip=4)
+electricity_price <- read.csv(here("Data/Average_retail_price_of_electricity_United_States_monthly.csv"),header=TRUE,skip=4)
 
 #Inspect data
 head(electricity_price)
@@ -144,7 +145,7 @@ Remember from previous scripts that the electricity price series has a stochasti
 #Creating non-seasonal residential price time series
 deseasonal_residential_price <- seasadj(decompose_residential_price)  
 
-# Find out how many time we need to difference
+# Find out how many time we need to difference by using ndiffs()
 n_diff <- ndiffs(deseasonal_residential_price)
 cat("Number of differencing needed: ",n_diff)
 
@@ -222,6 +223,9 @@ plot_grid(
   nrow=1
 )
 
+#the high coefficient in the PACF (spark at lag 1), meaning there might be the unit root in the series. 
+#Thus, we will need to difference the series 
+
 
 ```
 
@@ -229,8 +233,9 @@ plot_grid(
 ## Manually fitting seasonal ARIMA to original series
 
 ```{r}
-
-
+Model1<-Arima(ts_electricity_price[,"Residential"],order=c(1,1,1),seasonal=c(0,1,1),include.drift=FALSE)
+#explain the relationship between P and p
+#we do not need to differencing the trend if we are feeding AR(2)
 ```
 
 ## Automatically fitting seasonal ARIMA to original series

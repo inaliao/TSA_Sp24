@@ -55,6 +55,7 @@ Consider the data from the file "Net_generation_United_States_all_sectors_monthl
 Import the csv file and create a time series object for natural gas. Make you sure you specify the **start=** and **frequency=** arguments. Plot the time series over time, ACF and PACF.
 
 ```{r Import Data}
+here()
 raw_generation<-read.csv(
   here("Data/Net_generation_United_States_all_sectors_monthly.csv"),
   skip=4,header=TRUE)
@@ -62,6 +63,13 @@ raw_generation<-read.csv(
 #change the format of date
 Date<-my(raw_generation$Month)
 raw_generation<-cbind(Date, raw_generation[,2:6])
+
+#generate a sequence of data to check if there is N/A
+#gas_data <- data %>%
+  #mutate(Date = my(Month)) %>%
+  #arrange(Date) %>%
+  #mutate(Nat.gas = natural.gas.thousand.megawatthours) %>%
+  #select(Date,Nat.gas)
 
 #select needed columns
 df_gas<-raw_generation[,c(1,4)]
@@ -105,6 +113,8 @@ plot_grid(
 )
 
 ```
+>Answer: Seasonal component seems to have been eliminated with the seasonal adjustment. Series
+still exibits a trend from the ACF plot since we have a slow decay of the autocorrelation coeficients.
 
 ## Modeling the seasonally adjusted or deseasonalized series
 
@@ -117,7 +127,9 @@ Run the ADF test and Mann Kendall test on the deseasonalized data from Q2. Repor
 trend::mk.test(deseason_gas) #p-value < 2.2e-16
 
 #ADF test
-adf.test(deseason_gas,alternative = "stationary") #p-value = 0.01
+adf.test(deseason_gas,alternative = "stationary") #p-value = 0.01 
+#the stationary test suggest that the trend is stationary; however, the ACF plot show a strong trend.
+#In this case, we still need to difference the series 
 ```
 The Mann-Kendall test result suggests that there is a significant decreasing trend in the time series data (p-value<0.05, and tau<0). The ADF test result rejects the null hypothesis of a unit root in the time series, meaning that the time series is stationary (p-value<0.05). 
 
@@ -132,6 +144,9 @@ Using the plots from Q2 and test results from Q3 identify the ARIMA model parame
 #find out how many time we need to difference 
 n_diff <- ndiffs(deseason_gas)
 cat("Number of differencing needed: ",n_diff) 
+
+#use the deseason series for differencing before identifying the order 
+#deseason_diff_gas<-diff(deseason_gas,lag=1,differences=1)
 
 #p=1, d=1, q=0
 Model1<-Arima(deseason_gas,order=c(1,1,0),include.drift=TRUE)
@@ -189,7 +204,14 @@ Repeat Q4-Q6 for the original series (the complete series that has the seasonal 
 > Answer: In the original time series, the ACF plot shows a slow decay, and the PACF plot has a clear cutoff at lag 1 and a spike at lag 12, suggesting that P=1. Given the constraints of P+Q = 1, Q should be 0. 
 
 ```{r}
+#differencing at lag 12 before determining the ARIMA order
+#gas_ts_seasdiff <- diff(gas_ts, lag = 12, differences = 1)
+
+
 #d+D less than or equal to 2: No drift term fitted as the order of difference is 2 or more
+#Note that lag 2 is already falling withing the blue dashed lines. 
+#It seems like we do not need a moving average component
+
 Model1_season<-Arima(ts_gas,order=c(1,1,0),seasonal=c(1,1,1),include.drift=FALSE)
 print(Model1_season) #minimum AIC
 Model2_season<-Arima(ts_gas,order=c(1,1,0),seasonal=c(1,0,1),include.drift=TRUE)

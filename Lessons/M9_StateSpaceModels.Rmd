@@ -189,15 +189,25 @@ The function takes a few arguments, here are the important ones:
 
 
 ```{r}
+SS_seas_test <- StructTS(ts_price,
+                    type="BSM",fixed=c(NA,NA,NA,NA))  
+ #this function has convergence issues
+checkresiduals(SS_seas_test)
+
+#fix the parameter manually
 SS_seas <- StructTS(ts_price,
                     type="BSM",fixed=c(0.001,0.01,0.3,NA)) 
 
 #this function has convergence issues
 checkresiduals(SS_seas)
+#stochastic linear trend still has high residuals and the trend in the series 
+#we might need to differencing the series first 
 
-#SS_seas <- StructTS(ts_price,
-#                    type="BSM",fixed=c(NA,NA,NA,NA))   #this function has convergence issues
-#checkresiduals(SS_seas)
+SS_seas <- StructTS(ts_price,
+                    type="BSM",fixed=c(0.1,0.01,0.3,NA)) 
+checkresiduals(SS_seas)
+#confidence interval increase -> start with the first paramter small (0.001)
+
 
 #Generating forecasts
 # StructTS() does not call the forecast() internally so we need one more step
@@ -224,7 +234,7 @@ The measures calculated are:
 
 We will change this part a bit compared to M9 because I want the accuracy just for the forecasting window of 12 months. Just to simplify the code I will create a vector with the last 12 observations. At this point make sure that for all instances that when you forecast you specify `holdout=TRUE` because we want to access the accuracy of the forecast out-of-sample.
 
-```{r}
+```{r Accuracy}
 #Model 1: Arithmetic mean
 MEAN_scores <- accuracy(MEAN_seas$mean,last_obs)  #store the performance metrics
 
@@ -246,14 +256,17 @@ SS_scores <- accuracy(SS_for$mean,last_obs)
 
 Now we will create a data frame that combines performance metrics for all the three models. You can choose one metric to help you choose among models. For example let's say we want the model with lowest RMSE.
 
-````{r}
+````{r Compare metrix}
 #create data frame
 seas_scores <- as.data.frame(rbind(MEAN_scores, SNAIVE_scores, SARIMA_scores,SSES_scores,SS_scores))
 row.names(seas_scores) <- c("MEAN", "SNAIVE","SARIMA","SSES","BSM")
 
+
 #choose model with lowest RMSE
 best_model_index <- which.min(seas_scores[,"RMSE"])
 cat("The best model by RMSE is:", row.names(seas_scores[best_model_index,]))                       
+#historical fit is the best-performance model 
+#try another year to see if BSM is the best performed model 
                             
 ```
 
